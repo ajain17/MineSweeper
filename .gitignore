@@ -1,0 +1,8 @@
+# Compiled source #
+###################
+out/
+
+# IDE File
+###################
+.idea/
+TopHatterMineSweeper.iml
