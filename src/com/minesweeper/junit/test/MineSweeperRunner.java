@@ -9,7 +9,7 @@ import org.junit.runner.notification.Failure;
 public class MineSweeperRunner {
     public static void main(String[] args) {
         Result result = JUnitCore.runClasses(MineSweeperTest.class);
-        for (Failure failure : result.getFailures()) {
+        for (Failure failure: result.getFailures()) {
             System.out.println(failure.toString());
         }
         System.out.println(result.wasSuccessful());

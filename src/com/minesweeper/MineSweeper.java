@@ -8,204 +8,195 @@ import java.util.*;
  *          * - denotes blasted mine
  */
 public class MineSweeper implements IMineSweeper {
-    public String status;
-    public boolean gameInProgress;
-    int noOfMines;
-    Character[][] mineBoard;
-    int size;
-    static Scanner scanner = new Scanner(System.in);
-    List < Indices > indexList = new ArrayList < > ();
 
+    public MineSweeperBeanClass mineBean = new MineSweeperBeanClass();
     public MineSweeper() {}
     public MineSweeper(int size, int noOfMines) {
-
-        mineBoard = new Character[size][size];
-        this.noOfMines = noOfMines;
-        this.size = size;
+        mineBean.setSize(size);
+        mineBean.setNoOfMines(noOfMines);
+        mineBean.createMineBoard(new Mine[size][size]);
+        mineBean.setNoOfUncoveredCells(0);
+        mineBean.setGameStatus("progress");
     }
 
     @Override
-    public Character[][] createMineField(int size) {
+    public void createMineField(int size) {
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                mineBoard[i][j] = 'X';
+                mineBean.setMineBoard(i, j, new Mine(0, true));
             }
         }
-        return mineBoard;
     }
 
     @Override
     public int addMinesRandomly() {
         int minesCount = 0;
         Random random = new Random();
-        while (minesCount < noOfMines) {
-            int randomRow = random.nextInt(size);
-            int randomCol = random.nextInt(size);
+        Mine mine;
+        while (minesCount < mineBean.getNoOfMines()) {
+            int randomRow = random.nextInt(mineBean.getSize());
+            int randomCol = random.nextInt(mineBean.getSize());
+            mine = mineBean.getMineBoard()[randomRow][randomCol];
             //check if its not already used
-            if (mineBoard[randomRow][randomCol] != 'M') {
-                mineBoard[randomRow][randomCol] = 'M';
+            if (mine.surroundingMinesCount != -1) {
+                mine.surroundingMinesCount = -1;
+                mineBean.setMineBoard(randomRow, randomCol, mine); //-1 represents its a mine
+                setNeighbors(randomRow, randomCol);
                 minesCount++;
-                indexList.add(new Indices(randomRow, randomCol));
             }
         }
         return minesCount;
     }
 
+
+    public boolean isValidCell(int row, int col, boolean uncoveringCells) {
+        // if array index out of bounds, return false
+        if (row < 0 || row >= mineBean.getSize() || col < 0 || col >= mineBean.getSize())
+            return false;
+        //if this method is calling from setNeighbors, uncoveringCells is false
+        if (!uncoveringCells) {
+            return mineBean.getMineBoard()[row][col].surroundingMinesCount != -1;
+        } else { //if uncovering cells, validity condition includes that if this cell is a mine, dont uncover neighboring cells
+            return (mineBean.getMineBoard()[row][col].covered == true && mineBean.getMineBoard()[row][col].surroundingMinesCount != -1);
+        }
+    }
+
+    public void setNeighbors(int row, int col) {
+        boolean uncoveringCells = false;
+        //if any of the neighbors is a mine, we do not set that cell's surroundingMinesCount property
+        if (isValidCell(row - 1, col - 1, uncoveringCells))
+            mineBean.getMineBoard()[row - 1][col - 1].surroundingMinesCount += 1;
+        if (isValidCell(row - 1, col, uncoveringCells))
+            mineBean.getMineBoard()[row - 1][col].surroundingMinesCount += 1;
+        if (isValidCell(row - 1, col + 1, uncoveringCells))
+            mineBean.getMineBoard()[row - 1][col + 1].surroundingMinesCount += 1;
+        if (isValidCell(row, col - 1, uncoveringCells))
+            mineBean.getMineBoard()[row][col - 1].surroundingMinesCount += 1;
+        if (isValidCell(row, col + 1, uncoveringCells))
+            mineBean.getMineBoard()[row][col + 1].surroundingMinesCount += 1;
+        if (isValidCell(row + 1, col - 1, uncoveringCells))
+            mineBean.getMineBoard()[row + 1][col - 1].surroundingMinesCount += 1;
+        if (isValidCell(row + 1, col, uncoveringCells))
+            mineBean.getMineBoard()[row + 1][col].surroundingMinesCount += 1;
+        if (isValidCell(row + 1, col + 1, uncoveringCells))
+            mineBean.getMineBoard()[row + 1][col + 1].surroundingMinesCount += 1;
+    }
+
+    public void uncoverNeighbors(int row, int col) {
+        boolean uncoveringCells = true;
+        Queue < Index > neighbors = new LinkedList < > ();
+        Index index = new Index(row, col);
+        neighbors.add(index);
+        while (!neighbors.isEmpty()) {
+            Index currentIndex = neighbors.poll();
+            row = currentIndex.row;
+            col = currentIndex.col;
+            if (mineBean.getMineBoard()[row][col].covered != false) {
+                mineBean.setNoOfUncoveredCells(mineBean.getNoOfUncoveredCells() + 1);
+                mineBean.getMineBoard()[row][col].covered = false;
+                if (mineBean.getMineBoard()[row][col].surroundingMinesCount > 0) {
+                    continue;
+                }
+                if (isValidCell(row - 1, col, uncoveringCells))
+                    neighbors.add(new Index(row - 1, col));
+                if (isValidCell(row + 1, col, uncoveringCells))
+                    neighbors.add(new Index(row + 1, col));
+                if (isValidCell(row, col - 1, uncoveringCells))
+                    neighbors.add(new Index(row, col - 1));
+                if (isValidCell(row, col + 1, uncoveringCells))
+                    neighbors.add(new Index(row, col + 1));
+                if (isValidCell(row - 1, col - 1, uncoveringCells))
+                    neighbors.add(new Index(row - 1, col - 1));
+                if (isValidCell(row + 1, col + 1, uncoveringCells))
+                    neighbors.add(new Index(row + 1, col + 1));
+                if (isValidCell(row - 1, col + 1, uncoveringCells))
+                    neighbors.add(new Index(row - 1, col + 1));
+                if (isValidCell(row + 1, col - 1, uncoveringCells))
+                    neighbors.add(new Index(row + 1, col - 1));
+            }
+        }
+    }
     @Override
-    public boolean playGame(int row, int column, Character[][] mineBoard) {
-        if (mineBoard[row][column] == '.')
+    public boolean playGame(int row, int column) {
+        if (mineBean.getMineBoard()[row][column].covered == false) {
             System.out.println("Mine is already uncovered");
-
-        if (mineBoard[row][column] == 'X') {
-            mineBoard[row][column] = '.';
-            if (checkForWinningState(mineBoard)) {
-                status = "You won the game. Game Over.";
-                gameInProgress = false;
-                System.out.println(status);
-                displayMineBoard(gameInProgress);
-                System.exit(1);
-            }
-        }
-
-        if (mineBoard[row][column] == 'M') {
-            mineBoard[row][column] = '*';
-            status = "You lost the game. Game Over.";
-            gameInProgress = false;
-            System.out.println(status);
-            displayMineBoard(gameInProgress);
-            System.exit(1);
-        }
-        return true;
-    }
-
-    public boolean checkForWinningState(Character[][] mineBoard) {
-        int count = 0;
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (mineBoard[i][j] == '.')
-                    count++;
-            }
-        }
-        //game is won only when mines are covered and everything else uncovered i.e. having period symbol
-        return (size * size - count == noOfMines);
-    }
-
-    private void displayMineBoard(boolean gameInProgress) {
-        System.out.println(gameInProgress);
-        System.out.println();
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if(gameInProgress) {
-                    if(mineBoard[i][j] == 'M')
-                        System.out.print('X' + " ");
-                    else
-                        System.out.print(mineBoard[i][j] + " ");
-                }  else  {
-                    System.out.print(mineBoard[i][j] + " ");
+        } else {
+            if (mineBean.getMineBoard()[row][column].surroundingMinesCount == -1) {
+                mineBean.setGameStatus("lost");
+                System.out.println("You lost the game. Game Over.");
+            } else {
+                if (mineBean.getMineBoard()[row][column].surroundingMinesCount == 0) {
+                    uncoverNeighbors(row, column);
+                } else {
+                    mineBean.getMineBoard()[row][column].covered = false;
+                    mineBean.setNoOfUncoveredCells(mineBean.getNoOfUncoveredCells() + 1);
+                }
+                if (isWinningState()) {
+                    mineBean.setGameStatus("won");
+                    System.out.println("You won the game. Game Over.");
                 }
             }
-            System.out.println();
         }
+        displayMineBoard();
+        return true;
     }
-/*
-    private void displayTrueMineBoard() {
+
+    public boolean isWinningState() {
+        return (mineBean.getNoOfUncoveredCells() == Math.pow(mineBean.getSize(), 2) - mineBean.getNoOfMines());
+    }
+
+    public void displayMineBoard() {
         System.out.println();
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-
+        if (mineBean.getGameStatus().equalsIgnoreCase("progress")) {
+            for (int i = 0; i < mineBean.getSize(); i++) {
+                for (int j = 0; j < mineBean.getSize(); j++) {
+                    if (!mineBean.getMineBoard()[i][j].covered && mineBean.getMineBoard()[i][j].surroundingMinesCount != 0)
+                        System.out.print(mineBean.getMineBoard()[i][j].surroundingMinesCount + " ");
+                    else if (!mineBean.getMineBoard()[i][j].covered && mineBean.getMineBoard()[i][j].surroundingMinesCount == 0)
+                        System.out.print("." + " ");
+                    else
+                        System.out.print("X" + " ");
+                }
+                System.out.println();
             }
-            System.out.println();
-        }
-    }*/
-
-    public boolean validateInput(int number) throws InvalidNumberException {
-        if (number < 1) {
-            throw new InvalidNumberException("Number can't be less than 0");
-        }
-        return true;
-    }
-
-    public boolean validateInputMines(int noOfMines, int gridSize) throws InvalidMineSizeException {
-        if (noOfMines > gridSize * gridSize) {
-            throw new InvalidMineSizeException("Number of mines can't be greater than the number of cells");
-        }
-        return true;
-    }
-
-    public static void main(String args[]) {
-        MineSweeper mineSweeper = new MineSweeper();
-        int numOfMines = 0;
-        int size = 0;
-        int row, column;
-        try {
-            System.out.println("Enter the size of the grid");
-            size = scanner.nextInt();
-
-            mineSweeper.validateInput(size);
-
-            System.out.println("Enter the number of mines");
-            numOfMines = scanner.nextInt();
-
-            mineSweeper.validateInput(numOfMines);
-            mineSweeper.validateInputMines(numOfMines, size);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } else {
+            if (mineBean.getGameStatus().equalsIgnoreCase("won")) { //reveal everything on the board
+                for (int i = 0; i < mineBean.getSize(); i++) {
+                    for (int j = 0; j < mineBean.getSize(); j++) {
+                        if (mineBean.getMineBoard()[i][j].surroundingMinesCount == -1)
+                            System.out.print("*" + " ");
+                        else
+                            System.out.print(mineBean.getMineBoard()[i][j].surroundingMinesCount + " ");
+                    }
+                    System.out.println();
+                }
+            } else if (mineBean.getGameStatus().equalsIgnoreCase("lost")) { //show only what's uncovered and mines
+                for (int i = 0; i < mineBean.getSize(); i++) {
+                    for (int j = 0; j < mineBean.getSize(); j++) {
+                        if (mineBean.getMineBoard()[i][j].surroundingMinesCount == -1)
+                            System.out.print("*" + " ");
+                        else {
+                            if (mineBean.getMineBoard()[i][j].covered == false)
+                                System.out.print(mineBean.getMineBoard()[i][j].surroundingMinesCount + " ");
+                            else
+                                System.out.print("X" + " ");
+                        }
+                    }
+                    System.out.println();
+                }
+            }
             System.exit(1);
         }
-        mineSweeper = new MineSweeper(size, numOfMines);
-        mineSweeper.gameInProgress = true;
-        mineSweeper.mineBoard = mineSweeper.createMineField(size);
-        mineSweeper.addMinesRandomly();
-        System.out.println("calling" + mineSweeper.gameInProgress);
-        mineSweeper.displayMineBoard(mineSweeper.gameInProgress);
-        System.out.println("Lets play the game!!");
-        while (true) {
-            while (true) {
-                System.out.print("Enter row: ");
-                row = MineSweeper.scanner.nextInt();
-                System.out.print("Enter column: ");
-                column = MineSweeper.scanner.nextInt();
-                boolean valid = row < size && column < size;
-                if (!valid)
-                    System.out.println("Error, please enter valid indices");
-                else
-                    break;
-            }
-            mineSweeper.playGame(row, column, mineSweeper.mineBoard);
-            mineSweeper.displayMineBoard(mineSweeper.gameInProgress);
-        }
-    }
-}
 
-class Indices {
-    int row;
-    int col;
-    Indices(int row, int col) {
-        this.row = row;
-        this.col = col;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
-        }
-        if (!(obj instanceof Indices)) {
-            return false;
-        }
-        Indices index = (Indices) obj;
-        return row == index.row && col == index.col;
+    public void validateInput(int number) throws InvalidNumberException {
+        if (number < 1)
+            throw new InvalidNumberException("Number can't be less than 0");
     }
-}
 
-class Mine {
-        int surroundingMinesCount;
-        boolean mine;
-        char value;
-
-    Mine(int surroundingMinesCount, boolean mine, char value) {
-    this.surroundingMinesCount = surroundingMinesCount;
-    this.mine = mine;
-    this.value = value;
+    public void validateInputMines(int noOfMines, int gridSize) throws InvalidMineSizeException {
+        if (noOfMines > gridSize * gridSize)
+            throw new InvalidMineSizeException("Number of mines can't be greater than the number of cells");
     }
 }
