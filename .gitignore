@@ -5,4 +5,4 @@ out/
 # IDE File
 ###################
 .idea/
-TopHatterMineSweeper.iml
+.DS_Store
